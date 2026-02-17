@@ -226,7 +226,7 @@ def tile_is_not_empty(tile, threshold_white=20):
     histogram = tile.histogram()
 
     # Take the median of each RGB channel. Alpha channel is not of interest.
-    # If roughly each chanel median is below a threshold, i.e close to 0 till color value around 250 (white reference) then tile mostly white.
+    # If roughly each channel median is below a threshold, i.e close to 0 till color value around 250 (white reference) then tile mostly white.
     whiteness_check = [0, 0, 0]
     for channel_id in (0, 1, 2):
         whiteness_check[channel_id] = np.median(
@@ -241,7 +241,7 @@ def tile_is_not_empty(tile, threshold_white=20):
     return True
 
 
-def crop_rect_from_slide(slide, rect):
+def crop_rect_from_slide(slide : openslide.OpenSlide, rect):
     minx, miny, maxx, maxy = rect.bounds
     # Note that the y-axis is flipped in the slide: the top of the shapely polygon is y = ymax,
     # but in the slide it is y = 0. Hence: miny instead of maxy.
