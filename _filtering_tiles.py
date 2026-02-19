@@ -1,15 +1,26 @@
 import time
 from tqdm import tqdm
 import openslide
-from preprocess import crop_rect_from_slide, tile_is_not_empty, create_tissue_tiles, create_tissue_mask
+from preprocess import crop_rect_from_slide, tile_is_not_empty, create_tissue_tiles, create_tissue_mask, make_tile_QC_fig
 from datetime import timedelta
+import os
 
-wsi_path = r"/mnt/d/original_scans/NikonS60/22 B 07247 D1.ndpi"
+wsi_path = r"D:\original_scans\panoramic\23 B 28240 A1.mrxs"
 tile_size_um = 360
 n_tiles = 100
+output_dir = "prova/"
 
 # Apri la slide
 wsi = openslide.open_slide(wsi_path)
+slide_id = os.path.basename(wsi_path).split(".")[0]
+
+QC_DIR = os.path.join(output_dir, "QC")
+TILE_DIR = os.path.join(output_dir, "train")
+slide_dir = os.path.join(TILE_DIR, slide_id)
+
+os.makedirs(QC_DIR, exist_ok=True)
+os.makedirs(TILE_DIR, exist_ok=True)
+os.makedirs(slide_dir, exist_ok=True)
 
 # --- Tissue mask creation ---
 start_mask = time.time()
@@ -24,12 +35,22 @@ tiles_from_tissue = create_tissue_tiles(wsi, tissue_mask_scaled, tile_size_um)
 end_tiles = time.time()
 print(f"Candidate tile extraction took: {timedelta(seconds=end_tiles - start_tiles)}")
 print(f"Candidate tiles before RGB filtering: {len(tiles_from_tissue)}")
-print(f"Tiles from tissue: {tiles_from_tissue}")
 
 # --- Benchmark loop originale ---
 total_crop_time = 0.0
 total_filter_time = 0.0
 filtered_tiles_RGB = []
+
+# Build a figure for quality control purposes, to check if the tiles are where we expect them.
+qc_img = make_tile_QC_fig(tiles_from_tissue, wsi, seg_level, 2, extra_tiles=None)
+qc_img_target_width = 1920
+qc_img = qc_img.resize(
+    (qc_img_target_width, int(qc_img.height / (qc_img.width / qc_img_target_width)))
+)
+qc_img_file_path = os.path.join(
+    QC_DIR, f"{slide_id}_tiles_QC.png"
+)
+qc_img.save(qc_img_file_path)
 
 for rect in tqdm(tiles_from_tissue[:n_tiles], desc="Filtering empty tiles"):
     # misura crop_rect_from_slide

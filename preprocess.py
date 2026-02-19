@@ -95,6 +95,16 @@ def construct_polygon(foreground_contours, hole_contours, min_area):
     return unary_union(polys)
 
 
+def compute_scaling_factor(wsi : openslide.OpenSlide, tile_size_microns : float , n_pixel_resized : int ):
+    mpp_x = float(wsi.properties['openslide.mpp-x'])
+    mpp_y = float(wsi.properties['openslide.mpp-y'])
+
+    wsi_res = max(mpp_x, mpp_y)
+    n_pixel_in_level_0 = tile_size_microns / wsi_res
+
+    downsample_factor = n_pixel_in_level_0 / n_pixel_resized
+    return downsample_factor
+
 def generate_tiles(
     tile_width_pix, tile_height_pix, img_width, img_height, offsets=[(0, 0)]
 ):
