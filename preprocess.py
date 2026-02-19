@@ -168,10 +168,10 @@ def create_tissue_mask(wsi, seg_level):
 
 
 def create_tissue_tiles(
-    wsi, tissue_mask_scaled, tile_size_microns, offsets_micron=None
+    wsi, tissue_mask_scaled, tile_size_microns, offsets_micron=None, log_info = False, log_warnings = False, 
 ):
-
-    print(f"tile size is {tile_size_microns} um")
+    if log_info : 
+        print(f"tile size is {tile_size_microns} um")
 
     # Compute the tile size in pixels from the desired tile size in microns and the image resolution
     assert (
@@ -184,7 +184,7 @@ def create_tissue_tiles(
     mpp_x = float(wsi.properties[openslide.PROPERTY_NAME_MPP_X])
     mpp_y = float(wsi.properties[openslide.PROPERTY_NAME_MPP_Y])
     mpp_scale_factor = min(mpp_x, mpp_y)
-    if mpp_x != mpp_y:
+    if (mpp_x != mpp_y) and  log_warnings:
         print(
             f"mpp_x of {mpp_x} and mpp_y of {mpp_y} are not the same. Using smallest value: {mpp_scale_factor}"
         )
@@ -247,6 +247,34 @@ def crop_rect_from_slide(slide : openslide.OpenSlide, rect):
     # but in the slide it is y = 0. Hence: miny instead of maxy.
     top_left_coords = (int(minx), int(miny))
     return slide.read_region(top_left_coords, 0, (int(maxx - minx), int(maxy - miny)))
+
+
+def crop_rect_from_slide_at_level(slide: openslide.OpenSlide, rect: Polygon, level: int):
+    """
+    Crop a rectangular region from a whole-slide image at a given pyramid level.
+
+    Parameters
+    ----------
+    slide : openslide.OpenSlide
+        The OpenSlide object representing the whole-slide image.
+    rect : Polygon
+        A shapely Polygon defining the region to crop.  
+        IMPORTANT: The polygon coordinates must be expressed in the coordinate
+        system of level 0 (full resolution).
+    level : int
+        The pyramid level from which the region will be extracted.
+
+    Returns
+    -------
+    PIL.Image.Image
+        The cropped image region at the specified level.
+    """
+    minx, miny, maxx, maxy = rect.bounds
+    scaling_factor = slide.level_downsamples[level]
+    x, y = int(minx), int(miny)
+    w, h = int((maxx - minx) / scaling_factor), int((maxy - miny) / scaling_factor)
+    img = slide.read_region((x, y), level, (w, h))
+    return img
 
 
 class BagOfTiles(Dataset):
